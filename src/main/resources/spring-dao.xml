@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        https://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        https://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!--加载数据库配置文件-->
+    <!--classpath:必须配置这个，这个表示指定classpath目录下寻找-->
+    <context:property-placeholder location="classpath:db.properties" />
+
+    <!--配置数据源，数据库连接池：
+        DriverManagerDataSource:spring自带的jdbc
+        -->
+    <bean class="com.mchange.v2.c3p0.ComboPooledDataSource" id="dataSource">
+        <property name="driverClass" value="${jdbc.driver}"/>
+        <property name="jdbcUrl" value="${jdbc.url}"/>
+        <property name="user" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+
+        <!-- c3p0连接池的私有属性 -->
+        <property name="maxPoolSize" value="30"/>
+        <property name="minPoolSize" value="10"/>
+        <!-- 关闭连接后不自动commit -->
+        <property name="autoCommitOnClose" value="false"/>
+        <!-- 获取连接超时时间 -->
+        <property name="checkoutTimeout" value="10000"/>
+        <!-- 当获取连接失败重试次数 -->
+        <property name="acquireRetryAttempts" value="2"/>
+    </bean>
+
+    <!--配置SqlSessionFactoryBean-->
+    <bean class="org.mybatis.spring.SqlSessionFactoryBean" id="sqlSessionFactory">
+        <!--导入数据源-->
+        <property name="dataSource" ref="dataSource"/>
+        <!--关联mybatis核心配置文件-->
+        <property name="configLocation" value="classpath:mybatis-config.xml"/>
+    </bean>
+
+
+    <!-- 配置扫描Dao接口包，动态实现Dao接口注入到spring容器中 ,
+        配置这个之后，我们就不在需要配置mapper层的实现类了
+        原本的做法：
+            方法一：
+                1.编写mapper层接口的实现类，写set注入SqlSessionTemplate依赖
+                2.在配置文件中配置SqlSessionTemplate的bean，这个需要注入SqlSessionFactory
+                3.再配置mapper接口的实现类的bean，并且把SqlSessionTemplate注入(这一步可以使用注解自动装配)
+            方法二:
+                1.编写mapper层接口的实现类,继承SqlSessionDaoSupport
+                    (继承后可以直接获得SqlSessionTemplate对象和SqlSessionFactory对象)
+                2.配置mapper接口的实现类的bean，并且把SqlSessionTemplate或者SqlSessionFactory注入
+
+        现在的做法：
+            直接spring帮我们做了，配置MapperScannerConfigurer即可-->
+
+    <!--解释 ：https://www.cnblogs.com/jpfss/p/7799806.html-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!-- 注入sqlSessionFactory -->
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+        <!-- 给出需要扫描Dao接口包 -->
+        <property name="basePackage" value="com.dxw.mapper"/>
+    </bean>
+
+</beans>
